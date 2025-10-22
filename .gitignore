@@ -1,0 +1,9 @@
+# Ignore all NumPy, CSV, and PyTorch files
+*.npy
+*.csv
+*.pt
+
+# Keep these specific files
+!counts.npy
+!timestamps.npy
+!adult.csv
