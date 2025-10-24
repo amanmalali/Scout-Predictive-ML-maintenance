@@ -191,178 +191,6 @@ def jensen_shannon_divergence(array1, array2, bins=50):
     js_divergence = 0.5 * (entropy2(hist1, midpoint) + entropy2(hist2, midpoint))
     return js_divergence
 
-def get_base_distribution(sense_model,train_x,train_y,reg_x,reg_y,reg,window_size=1000):
-    tests=100
-    pred_logits=sense_model.inf(train_x,apply_temp=True)
-    probs=F.softmax(pred_logits,dim=-1)
-    model_uncer=model_uncertainty(probs).detach().numpy()
-    model_uncer[model_uncer<0] = 0
-    mean_probs=torch.mean(probs,dim=1)
-    uncer=entropy(mean_probs).detach().numpy()
-    confidences, predictions = torch.max(mean_probs, 1)
-    confidences=confidences.detach().numpy()
-    predictions=predictions.detach().numpy()
-    # np.save('./cifar10/data/test_epis.npy',model_uncer)
-    # x=input()
-    reg_input=np.hstack([np.expand_dims(predictions,1),np.expand_dims(model_uncer,1),np.expand_dims(uncer,1)])
-    y_pred = reg.predict(reg_input, quantiles=[0.3, 0.5, 0.85])
-    y_pred=y_pred[:,2]
-    label_density=gen_dist_labels(train_y)
-    uncer_density=gen_dist_cont(uncer)
-    epis_density=gen_dist_cont(model_uncer)
-    dist_label=[]
-    dist_uncer=[]
-    dist_epis=[]
-    for t in range(tests):
-        idx=np.random.choice(np.arange(len(train_x)),window_size,replace=False)
-        pred_idx=y_pred[idx]#predictions[idx]
-        uncer_idx=uncer[idx]
-        epis_idx=model_uncer[idx]
-        pred_idx_dist=gen_dist_labels(pred_idx)
-        uncer_kde=gen_dist_cont(uncer_idx)
-        epis_kde=gen_dist_cont(epis_idx)
-
-        x_vals = np.linspace(min(model_uncer.min(), epis_idx.min()), max(model_uncer.max(), epis_idx.max()), 500)
-
-        pdf1 = epis_density(x_vals)
-        pdf2 = epis_kde(x_vals)
-        js_dist_epis = jensenshannon(pdf1, pdf2)
-        dist_epis.append(js_dist_epis)
-
-        x_vals = np.linspace(min(uncer.min(), uncer_idx.min()), max(uncer.max(), uncer_idx.max()), 500)
-
-        pdf1 = uncer_density(x_vals)
-        pdf2 = uncer_kde(x_vals)
-        js_dist_uncer = jensenshannon(pdf1, pdf2)
-        dist_uncer.append(js_dist_uncer)
-
-        js_dist_label=jensenshannon(label_density,pred_idx_dist)
-        dist_label.append(js_dist_label)
-    
-    label_stat=sub_distribution(label_density,np.array(dist_label))
-    uncer_stat=sub_distribution(uncer_density,np.array(dist_uncer))
-    epis_stat=sub_distribution(epis_density,np.array(dist_epis))
-
-    pred_logits=sense_model.inf(reg_x,apply_temp=True)
-    probs=F.softmax(pred_logits,dim=-1)
-    reg_model_uncer=model_uncertainty(probs).detach().numpy()
-    reg_model_uncer[reg_model_uncer<0] = 0
-    mean_probs=torch.mean(probs,dim=1)
-    reg_uncer=entropy(mean_probs).detach().numpy()
-
-    full_dist=distribution(label_stat,epis_stat,uncer_stat)
-    full_dist.quantile=CenteredQuantileTransformer(reg_model_uncer)
-    test_quants=[0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,0.99]
-    y_pred_test = reg.predict(reg_input, quantiles=test_quants)
-    y_pred_test=np.array(y_pred_test)
-
-    train_quant=[]
-    for e in model_uncer:
-        train_quant.append(full_dist.quantile.find_quantile(e))
-    train_quant=np.array(train_quant)
-
-    tests=100
-    train_avg=[]
-    for t in range(tests):
-        idx=np.random.choice(np.arange(len(model_uncer)),100)
-        quant_sel=train_quant[idx]
-        avg_quant=quant_sel.mean()
-        train_avg.append(quant_sel.mean())
-    train_avg=np.array(train_avg)
-
-    full_dist.train_avg_quant=train_avg.mean()
-
-    quantile_df=pd.DataFrame(y_pred_test,columns=test_quants)
-    quantile_df['target']=train_y
-    quantile_sum=quantile_df.cumsum()
-    min_error=1000000000
-    best_quant=0
-    for i in range(len(test_quants)):
-        mae_error=mean_absolute_error(quantile_sum['target'].values,quantile_sum[test_quants[i]].values)
-        print(test_quants[i],mae_error)
-        if mae_error<=min_error:
-            min_error=mae_error
-            best_quant=test_quants[i]
-    
-    full_dist.best_quant=best_quant
-
-    print("BEST QUANT",full_dist.best_quant)
-    df=pd.DataFrame(y_pred_test,columns=test_quants)
-    df['y']=train_y
-    df['epis']=model_uncer
-    q=[]
-    for i in range(len(df)):
-        q.append(full_dist.quantile.find_quantile(df.loc[i,['epis']].values[0]))
-    df['epis_quant']=q
-    df['vote'] = df[test_quants].sum(axis=1)
-    full_dist.quant_thresh=df.loc[(df['y']==1)&(df['epis_quant']>=0.1)]['epis_quant'].mean()
-    full_dist.min_votes=df.loc[(df['y']==0)&(df['epis_quant']>full_dist.quant_thresh)]['vote'].mean()
-
-    min_error=1000000000
-    for i in range(len(test_quants)):
-        mae_error=mean_absolute_error(df.loc[(df['y']==1)&(df['epis_quant']>full_dist.quant_thresh)]['y'].values,df.loc[(df['y']==1)&(df['epis_quant']>full_dist.quant_thresh)][test_quants[i]].values)
-        mae_error2=mean_absolute_error(df.loc[(df['y']==0)&(df['epis_quant']>full_dist.quant_thresh)]['y'].values,df.loc[(df['y']==0)&(df['epis_quant']>full_dist.quant_thresh)][test_quants[i]].values)
-        
-        print(test_quants[i],mae_error,mae_error2,2*mae_error+mae_error2)
-
-        if (2*mae_error+mae_error2)<=min_error:
-            min_error=2*mae_error+mae_error2
-            best_quant=test_quants[i]
-    if best_quant>1:
-        best_quant=0.99
-
-    
-    
-    full_dist.best_upper_quant=best_quant
-    print("BEST UPPER QUANT",full_dist.best_upper_quant)
-    min_error=1000000000
-    for i in range(len(test_quants)):
-        mae_error=mean_absolute_error(df.loc[(df['vote']<full_dist.min_votes)&(df['epis_quant']>full_dist.quant_thresh)]['y'].values,df.loc[(df['vote']<full_dist.min_votes)&(df['epis_quant']>full_dist.quant_thresh)][test_quants[i]].values)
-        print(test_quants[i],mae_error)
-        if mae_error<=min_error:
-            min_error=mae_error
-            best_quant=test_quants[i]
-    
-    full_dist.best_mid_quant=(best_quant+full_dist.best_quant)/2
-    print("BEST MIDDLE QUANT",full_dist.best_mid_quant)
-
-    tests=1000
-
-    dist_avg=[]
-    for t in range(tests):
-        idx=np.random.choice(np.arange(len(df)),100)
-        quant_sel=df.loc[idx]['epis'].values
-        dist_avg.append(jensen_shannon_divergence(df['epis'].values,quant_sel))
-        avg_quant=quant_sel.mean()
-    dist_avg=np.array(dist_avg)
-    full_dist.test_epis_arr=df['epis'].values
-    full_dist.test_dist_arr=dist_avg
-
-    # np.save('./census/data/base_epis.npy',model_uncer)
-    # np.save('./census/data/reg_cifar_epis.npy',reg_model_uncer)
-    # np.save('./census/data/base_cifar_epis.npy',model_uncer)
-    # np.save('./census/data/quantile_cifar_test.npy',y_pred_test)
-    # np.save('./census/data/quantile_cifar_target.npy',train_y)
-    return full_dist
-
-    
-def get_training_dist(sense_model,train_x,train_y,qrf):
-
-    pred_logits=sense_model.inf(train_x,apply_temp=True)
-    probs=F.softmax(pred_logits,dim=-1)
-    
-    model_uncer=model_uncertainty(probs).detach().numpy()
-
-
-    mean_probs=torch.mean(probs,dim=1)
-
-    confidences, predictions = torch.max(mean_probs, 1)
-
-    confidences=confidences.detach().numpy()
-    predictions=predictions.detach().numpy()
-
-    feat=np.hstack([np.expand_dims(predictions,1),np.expand_dims(model_uncer,1)])
-
 
 def scale_dist(dist, u_min, u_max):
     # Normalize the uncertainty to be in the same scale as prediction (0 to 3)
@@ -874,7 +702,7 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,delta=4*60
                     evalset=image_dataset(train_x,train_y,transform=transform_test)
 
                     if sc is not None:
-                        retrain_path='./cifar10/checkpoint/retrain_ckpt_long_risk_with_threshold_v3_with_fix_reactive_'+str(kappa)+'_'+str(int(delta))+'_'+str(sc)+'_'+str(beta)+'.pth'
+                        retrain_path='./cifar10/checkpoint/retrain_ckpt_long_risk_with_threshold_v1_'+str(kappa)+'_'+str(int(delta))+'_'+str(sc)+'_'+str(beta)+'.pth'
                     net=train_img_model(trainset,testset,epochs=100,retrain=True,retrain_path=retrain_path)
                     net.eval()
                     if sc is not None:
@@ -922,7 +750,7 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,delta=4*60
                     sense_train_pred=np.expand_dims(sense_train_pred, axis=1)
                     
                     if old_sense_train_x is None:
-                        old_sense_train_x=np.load("./cifar10/data/ddla_cifar_train_x2_simple_ablation.npy")
+                        old_sense_train_x=np.load("./cifar10/data/ddla_cifar_train_x.npy")
 
                     # sense_distro_x=np.concatenate([old_sense_train_x[filler_idx],np.array(np_features)[data_avail]])
 
@@ -960,12 +788,12 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,delta=4*60
                     data_needed=[]
                     data_avail=[]
                     retraining_timestamps.append([in_ts,storage_data[-1:]['timestamp'].values[0],avg_train_loss])
-                    np.save('./cifar10/data/retraining_ts_long_risk_with_threshold_v3_with_fix_reactive_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'_'+str(beta)+'.npy',retraining_timestamps)   
+                    np.save('./cifar10/data/retraining_ts_long_risk_with_threshold_v1_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'_'+str(beta)+'.npy',retraining_timestamps)   
         print("Index : {}  True : {}   RiskScore : {}  Lower Bound : {}  Upper Bound : {}  Baseline :{}".format(index,true_loss,high_loss_ddla,predicted_lower,predicted_upper,train_loss_sum))
 
     storage_data = pd.DataFrame(np_data, columns=store_columns)
     # # np.save('./cifar10/data/resnet_simple_correction_ablation_v12_'+str(delta)+'_'+str(sc)+'.npy',np_features)
-    storage_data.to_csv('./cifar10/data/results_long_risk_with_threshold_v3_with_fix_reactive_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'_'+str(beta)+'.csv')
+    storage_data.to_csv('./cifar10/data/results_long_risk_with_threshold_v1_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'_'+str(beta)+'.csv')
     # dist_data=pd.DataFrame(dist_df_array, columns=dist_columns)
     # dist_data.to_csv('./cifar10/data/retraining_ts_long_v1_'+str(delta)+'_'+str(sc)+'.csv')
 
@@ -982,7 +810,7 @@ beta=float(sys.argv[4])
 
 future_data=pd.read_csv("./cifar10/data/future_long_scenario_"+str(sc)+".csv",index_col=0)
 
-filename='results_long_risk_with_threshold_v3_with_fix_reactive_'+str(kappa)+'_'+str(delta*60*60)+'_'+str(sc)+'_'+str(beta)+'.csv'
+filename='results_long_risk_with_threshold_v1_'+str(kappa)+'_'+str(delta*60*60)+'_'+str(sc)+'_'+str(beta)+'.csv'
 directory = "./cifar10/data/"
 
 

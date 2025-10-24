@@ -1120,7 +1120,7 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,delta=4*60
             evalset=image_dataset(train_x,train_y,transform=transform_test)
 
             if sc is not None:
-                retrain_path='./cifar10/checkpoint/retrain_ckpt_ddla_kappa_v5_paper_with_fix_reactive_'+str(kappa)+'_'+str(int(delta))+'_'+str(sc)+'_'+str(beta)+'.pth'
+                retrain_path='./cifar10/checkpoint/retrain_ckpt_ddla_kappa_v1_'+str(kappa)+'_'+str(int(delta))+'_'+str(sc)+'_'+str(beta)+'.pth'
             net=train_img_model(trainset,testset,epochs=100,retrain=True,retrain_path=retrain_path)
             net.eval()
             if sc is not None:
@@ -1172,7 +1172,7 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,delta=4*60
             data_avail=[]
             
             retraining_timestamps.append([in_ts,storage_data[-1:]['timestamp'].values[0],avg_train_loss])
-            np.save('./cifar10/data/retraining_ts_ddla_kappa_v5_paper_with_fix_reactive_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'_'+str(beta)+'.npy',retraining_timestamps)
+            np.save('./cifar10/data/retraining_ts_ddla_kappa_v1_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'_'+str(beta)+'.npy',retraining_timestamps)
         
 
         #######
@@ -1183,7 +1183,7 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,delta=4*60
         
     storage_data = pd.DataFrame(np_data, columns=store_columns)
     # np.save('./cifar10/data/resnet_simple_correction_ablation_v11_'+str(delta)+'_'+str(sc)+'.npy',np_features)
-    storage_data.to_csv('./cifar10/data/ddla_results_kappa_v5_paper_with_fix_reactive_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'_'+str(beta)+'.csv')
+    storage_data.to_csv('./cifar10/data/ddla_results_kappa_v1_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'_'+str(beta)+'.csv')
     dist_data=pd.DataFrame(dist_df_array, columns=dist_columns)
     # dist_data.to_csv('./cifar10/data/retraining_simple_correction_ablation_v11_'+str(delta)+'_'+str(sc)+'.csv')
 
@@ -1204,7 +1204,7 @@ beta=float(sys.argv[4])
 future_data=pd.read_csv("./cifar10/data/future_long_scenario_"+str(sc)+".csv",index_col=0)
 
 
-filename='ddla_results_kappa_v5_paper_with_fix_reactive_'+str(kappa)+'_'+str(delta*60*60)+'_'+str(sc)+'_'+str(beta)+'.csv'
+filename='ddla_results_kappa_v1_'+str(kappa)+'_'+str(delta*60*60)+'_'+str(sc)+'_'+str(beta)+'.csv'
 directory = "./cifar10/data/"
 
 

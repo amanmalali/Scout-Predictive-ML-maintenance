@@ -408,7 +408,7 @@ class CenteredQuantileTransformer:
         
         return quantile
 
-def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,reg=None,distro=None,avg_train_loss=-1,sc=None):
+def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,reg=None,distro=None,avg_train_loss=-1,sc=None,kappa=1500):
     uncer_counter=0
     count=0
     predicted_loss=0
@@ -486,7 +486,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
     retrain_ts=0
     time_spent_retraining=0
 
-    with open('./cifar10/saved_models/prophet.json', 'r') as fin:
+    with open('./census/saved_models/prophet.json', 'r') as fin:
         prophet_model = model_from_json(fin.read())  # Load model
 
 
@@ -545,7 +545,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
         if len(storage_data)>0:
             if storage_data.iloc[[-1]]['timestamp'].values[0]>retrain_ts:
                 new_close_ts=find_nearest(ts,retrain_ts)
-                if (storage_data['loss_label'][new_close_ts:].sum()-avg_train_loss*len(storage_data['loss_label'][new_close_ts:]))>2000:
+                if (storage_data['loss_label'][new_close_ts:].sum()-avg_train_loss*len(storage_data['loss_label'][new_close_ts:]))>1500:
         # if retrain_loss>4000 and len(storage_data)>10000:
                     train_loss_sum=0
                     retrain_ts=in_ts
@@ -573,7 +573,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
                     print(train_y.shape)
                     new_train_data=torch_dataset(train_x,train_y)
                     new_test_data=torch_dataset(test_x,test_y)
-                    model_path="./census/saved_models/census_classifier_v2_kappa=2000_"+str(int(delta))+"_"+str(sc)+".pt"
+                    model_path="./census/saved_models/census_classifier_v1_kappa="+str(kappa)+"_"+str(int(delta))+"_"+str(sc)+".pt"
                     start_time=time.time()
                     train_model(new_train_data,new_test_data,model_path,epochs=100)
                     time_taken=time.time()-start_time
@@ -605,7 +605,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
                     
 
                     retraining_timestamps.append([in_ts,storage_data[-1:]['timestamp'].values[0],temp_sense_train_y.mean(),time_spent_retraining])
-                    np.save('./census/data/retraining_ts_reactive_v2_kappa=2000_'+str(delta)+'_'+str(sc)+'.npy',retraining_timestamps)
+                    np.save('./census/data/retraining_ts_reactive_v1_kappa='+str(kappa)+'_'+str(delta)+'_'+str(sc)+'.npy',retraining_timestamps)
                     # x=input()
 
         
@@ -645,13 +645,14 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
         # print("True pred {} Predicted lower {} Predicted upper {}".format(true_loss, predicted_lower,predicted_upper))
     storage_data = pd.DataFrame(np_data, columns=store_columns)
 
-    storage_data.to_csv("./census/data/reactive_results_v2_kappa=2000_"+str(delta)+"_"+str(sc)+".csv")
+    storage_data.to_csv("./census/data/reactive_results_v1_kappa="+str(kappa)+"_"+str(delta)+"_"+str(sc)+".csv")
 
 
 delta=float(sys.argv[1])
 sc=sys.argv[2]
+kappa=int(sys.argv[3])
 
-future_data=pd.read_csv("./census/data/future_"+str(sc)+"_v2.csv",index_col=0)
+future_data=pd.read_csv("./census/data/future_"+str(sc)+".csv",index_col=0)
 alpha_model=torch.load("./census/saved_models/census_classifier_v1.pt")
 
 train_x=np.load("./census/data/sense_census_train_x.npy")
@@ -660,7 +661,7 @@ train_loss=np.load("./census/data/census_train_loss.npy")
 
 labeler=label_gen(train_loss)
 
-with open("./ts_eval_census/best_models/sense_model_ensemble.pkl",'rb') as inp:
+with open("./census/saved_models/sense_model_fbts.pkl",'rb') as inp:
     sense_model=pickle.load(inp)
 
 calib_x=np.load("./census/data/calib_un_x.npy")
@@ -671,5 +672,5 @@ reg=None
 # corr,uncorr=get_baseline(train_x,train_y,train_loss,sense_model)
 full_dist=None
 
-run_sim(future_data,alpha_model,model_inf,sense_model,labeler,delta=delta*60*60,reg=reg,distro=full_dist,avg_train_loss=train_y.mean(),sc=sc)
+run_sim(future_data,alpha_model,model_inf,sense_model,labeler,delta=delta*60*60,reg=reg,distro=full_dist,avg_train_loss=train_y.mean(),sc=sc,kappa=kappa)
 

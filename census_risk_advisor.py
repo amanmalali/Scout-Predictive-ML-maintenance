@@ -381,7 +381,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
                     print(train_y.shape)
                     new_train_data=torch_dataset(train_x,train_y)
                     new_test_data=torch_dataset(test_x,test_y)
-                    model_path="./census/saved_models/census_classifier_v6_paper_with_fix_reactive_"+str(int(delta))+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".pt"
+                    model_path="./census/saved_models/census_classifier_v1_risk_advisor_retrained_"+str(int(delta))+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".pt"
                     train_model(new_train_data,new_test_data,model_path,epochs=100)
                     alpha_model=torch.load(model_path)
                     
@@ -422,7 +422,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
                     # np.save("./census/data/calib_un_y.npy",calib_un_y)
 
                     sense_model.train_sense_model(risk_train_x,risk_train_y)
-                    with open("./census/saved_models/risk_model_retrain_v6_paper_with_fix_reactive_"+str(delta)+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".pkl",'wb') as output:
+                    with open("./census/saved_models/risk_model_retrain_v1_risk_advisor_"+str(delta)+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".pkl",'wb') as output:
                         pickle.dump(sense_model,output)
 
                     risk_thresh,risk_f1_score=find_best_thresh(sense_model,calib_un_x,calib_un_y)
@@ -432,7 +432,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
 
 
                     retraining_timestamps.append([in_ts,storage_data[-1:]['timestamp'].values[0],ddla_train_y.mean()])
-                    np.save('./census/data/retraining_ts_risk_v6_paper_with_fix_reactive_'+str(delta)+'_'+str(sc)+'_'+str(kappa)+'_'+str(beta)+'.npy',retraining_timestamps)
+                    np.save('./census/data/retraining_ts_risk_advisor_v1_'+str(delta)+'_'+str(sc)+'_'+str(kappa)+'_'+str(beta)+'.npy',retraining_timestamps)
                     # x=input()
 
         
@@ -450,7 +450,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
         # print("True pred {} Predicted lower {} Predicted upper {}".format(true_loss, predicted_lower,predicted_upper))
     storage_data = pd.DataFrame(np_data, columns=store_columns)
 
-    storage_data.to_csv("./census/data/risk_results_v6_paper_with_fix_reactive_"+str(delta)+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".csv")
+    storage_data.to_csv("./census/data/risk_results_v1_reactive_"+str(delta)+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".csv")
 
 
 delta=float(sys.argv[1])

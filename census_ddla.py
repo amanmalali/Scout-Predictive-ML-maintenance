@@ -463,18 +463,6 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
             df_train=pd.DataFrame(data=ddla_train_x,columns=cols)
 
 
-        # if len(retraining_timestamps)>0:
-        #     if storage_data['timestamp'].iloc[-1]<retraining_timestamps[-1][0]:
-        #         last_fixed=len(storage_data)
-
-        # if len(storage_data)>0 and (len(storage_data)-last_fixed)>100:
-        #     pred_fix=storage_data['loss_label'][last_fixed:].sum()-(storage_data.iloc[-1]['sense_pred_low']-storage_data.iloc[last_fixed]['sense_pred_low'])
-            
-        #     print("FIX VAL :",pred_fix)
-        #     print("Last fixed :",last_fixed)
-        #     last_fixed=len(storage_data)
-        #     high_loss_ddla=high_loss_ddla+pred_fix
-
         if len(retraining_timestamps)>0:
             if storage_data['timestamp'].iloc[-1]<retraining_timestamps[-1][0]:
                 last_fixed=len(storage_data)
@@ -527,7 +515,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
                     print(train_y.shape)
                     new_train_data=torch_dataset(train_x,train_y)
                     new_test_data=torch_dataset(test_x,test_y)
-                    model_path="./census/saved_models/census_classifier_v14_with_fix_retrained_ddla_"+str(int(delta))+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".pt"
+                    model_path="./census/saved_models/census_classifier_v1_retrained_ddla_"+str(int(delta))+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".pt"
                     start_time=time.time()
                     train_model(new_train_data,new_test_data,model_path,epochs=100)
                     time_taken=time.time()-start_time
@@ -569,7 +557,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
                     
                     avg_train_loss=ddla_train_y.mean()
                     retraining_timestamps.append([in_ts,storage_data[-1:]['timestamp'].values[0],temp_sense_train_y.mean(),time_spent_retraining,train_loss.mean(),train_loss.std()])
-                    np.save('./census/data/retraining_ts_ddla_v14_with_fix_'+str(delta)+'_'+str(sc)+'_'+str(kappa)+'_'+str(beta)+'.npy',retraining_timestamps)
+                    np.save('./census/data/retraining_ts_ddla_v1_'+str(delta)+'_'+str(sc)+'_'+str(kappa)+'_'+str(beta)+'.npy',retraining_timestamps)
                     # x=input()
 
         
@@ -587,7 +575,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
         # print("True pred {} Predicted lower {} Predicted upper {}".format(true_loss, predicted_lower,predicted_upper))
     storage_data = pd.DataFrame(np_data, columns=store_columns)
 
-    storage_data.to_csv("./census/data/ddla_results_v14_with_fix_"+str(delta)+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".csv")
+    storage_data.to_csv("./census/data/ddla_results_v1_"+str(delta)+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".csv")
 
 
 delta=float(sys.argv[1])

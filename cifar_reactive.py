@@ -538,7 +538,7 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,delta=8*60
     retrain_ts=0
     new_model=False
 
-    retrain_path='./cifar10/checkpoint/retrain_ckpt_reactive_long_v2_full_paper_'+str(kappa)+'_'+str(int(delta))+'_'+str(sc)+'.pth'
+    retrain_path='./cifar10/checkpoint/retrain_ckpt_reactive_long_v1_'+str(kappa)+'_'+str(int(delta))+'_'+str(sc)+'.pth'
 
     # with open('./cifar10/saved_models/prophet.json', 'r') as fin:
     #     prophet_model = model_from_json(fin.read())  # Load model
@@ -673,14 +673,14 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,delta=8*60
                     temp_sense_train_y=np.array(temp_sense_train_y)
                     avg_train_loss_new=temp_sense_train_y.mean()
                     retraining_timestamps.append([in_ts,storage_data[-1:]['timestamp'].values[0],avg_train_loss])
-                    np.save('./cifar10/data/retraining_ts_reactive_long_v2_full_paper_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'.npy',retraining_timestamps)
+                    np.save('./cifar10/data/retraining_ts_reactive_long_v1_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'.npy',retraining_timestamps)
 
 
         print("Index : {}  True : {}   Predicted : {}  Lower Bound : {}  Upper Bound : {}  Baseline :{}".format(index,true_loss,predicted_loss,predicted_lower,predicted_upper,train_loss_sum))
         
     storage_data = pd.DataFrame(np_data, columns=store_columns)
     # np.save('./cifar10/data/cifar_reactive_v12_'+str(delta)+'_'+str(sc)+'.npy',np_features)
-    storage_data.to_csv('./cifar10/data/results_test_cifar_reactive_long_v2_full_paper_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'.csv')
+    storage_data.to_csv('./cifar10/data/results_test_cifar_reactive_long_v1_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'.csv')
 
 def file_in_directory(filename, directory):
     """Check if a file exists in the given directory."""
@@ -693,7 +693,7 @@ kappa=int(sys.argv[3])
 
 future_data=pd.read_csv("./cifar10/data/future_long_scenario_"+str(sc)+".csv",index_col=0)
 
-filename='results_test_cifar_reactive_long_v2_full_paper_'+str(kappa)+'_'+str(delta*60*60)+'_'+str(sc)+'.csv'
+filename='results_test_cifar_reactive_long_v1_'+str(kappa)+'_'+str(delta*60*60)+'_'+str(sc)+'.csv'
 directory = "./cifar10/data/"
 
 

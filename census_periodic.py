@@ -504,7 +504,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
                 new_train_data=torch_dataset(train_x,train_y)
                 new_test_data=torch_dataset(test_x,test_y)
 
-                model_path="./census/saved_models/census_classifier_v42_retrained_periodic_"+str(retraining_period)+"_"+str(sc)+"_"+str(delta)+".pt"
+                model_path="./census/saved_models/census_classifier_v1_retrained_periodic_"+str(retraining_period)+"_"+str(sc)+"_"+str(delta)+".pt"
                 start_time=time.time()
                 train_model(new_train_data,new_test_data,model_path,epochs=100)
                 time_taken=time.time()-start_time
@@ -532,7 +532,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
                 
 
                 retraining_timestamps.append([in_ts,storage_data[-1:]['timestamp'].values[0],temp_sense_train_y.mean(),time_spent_retraining])
-                np.save('./census/data/retraining_ts_periodic_v42_'+str(retraining_period)+'_'+str(sc)+'_'+str(delta)+'.npy',retraining_timestamps)
+                np.save('./census/data/retraining_ts_periodic_v1_'+str(retraining_period)+'_'+str(sc)+'_'+str(delta)+'.npy',retraining_timestamps)
                 # x=input()
 
         
@@ -572,7 +572,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
         # print("True pred {} Predicted lower {} Predicted upper {}".format(true_loss, predicted_lower,predicted_upper))
     storage_data = pd.DataFrame(np_data, columns=store_columns)
 
-    storage_data.to_csv("./census/data/periodic_results_v42_"+str(retraining_period)+"_"+str(sc)+"_"+str(delta)+".csv")
+    storage_data.to_csv("./census/data/periodic_results_v1_"+str(retraining_period)+"_"+str(sc)+"_"+str(delta)+".csv")
 
 
 delta=float(sys.argv[1])

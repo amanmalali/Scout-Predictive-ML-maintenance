@@ -703,8 +703,8 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,delta=8*60
                 transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
                 ])
                 if old_train_x is None:
-                    old_train_x=np.load("./cifar10/data/train_x_ablation.npy")
-                    old_train_y=np.load("./cifar10/data/train_y_ablation.npy")
+                    old_train_x=np.load("./cifar10/data/train_x.npy")
+                    old_train_y=np.load("./cifar10/data/train_y.npy")
                 
 
                 
@@ -751,7 +751,7 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,delta=8*60
                 new_avg_train_loss=temp_label.mean()
                 
                 retraining_timestamps.append([in_ts,storage_data[-1:]['timestamp'].values[0],avg_train_loss,time_spent_retraining])
-                np.save('./cifar10/data/retraining_ts_periodic_long_v5_'+str(retraining_period)+'_'+str(sc)+'_'+str(delta)+'.npy',retraining_timestamps)
+                np.save('./cifar10/data/retraining_ts_periodic_long_v1_'+str(retraining_period)+'_'+str(sc)+'_'+str(delta)+'.npy',retraining_timestamps)
 
 
 
@@ -760,7 +760,7 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,delta=8*60
         
     storage_data = pd.DataFrame(np_data, columns=store_columns)
     # np.save('./cifar10/data/cifar_periodic_v12_'+str(retraining_period)+'_'+str(sc)+'_'+str(delta)+'.npy',np_features)
-    storage_data.to_csv('./cifar10/data/results_test_cifar_periodic_long_v5_'+str(retraining_period)+'_'+str(sc)+'_'+str(delta)+'.csv')
+    storage_data.to_csv('./cifar10/data/results_test_cifar_periodic_long_v1_'+str(retraining_period)+'_'+str(sc)+'_'+str(delta)+'.csv')
 
 
 

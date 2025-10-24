@@ -51,6 +51,9 @@ import time
 from metric_utils import compute_uce_from_logits
 import copy
 
+#global ent_mode
+ent_mode="collision"
+
 
 def fit(sense, calib_ds, mode: str, trials: int, X_train: np.ndarray, y_train: torch.Tensor):
     """
@@ -182,7 +185,7 @@ def dummy_baseline_new(sense_model,scaled_labeler,calib_x,calib_y,calib_loss):
     # mean_probs=torch.mean(probs,dim=1)
     # uncer=entropy(mean_probs).detach().numpy()
 
-    ent_mode="collision"
+
 
     if ent_mode=="shannon":
         model_uncer=model_uncertainty_shannon(probs).detach().numpy()
@@ -365,7 +368,7 @@ def get_base_distribution(sense_model,train_x,train_y,reg_x,reg_y,reg,window_siz
     pred_logits=sense_model.inf(train_x,apply_temp=True,mode="feat")
     probs=F.softmax(pred_logits,dim=-1)
 
-    ent_mode="collision"
+
 
     if ent_mode=="shannon":
         model_uncer=model_uncertainty_shannon(probs).detach().numpy()
@@ -708,7 +711,7 @@ class CenteredQuantileTransformer:
         
         return quantile
 
-def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,scaled_labeler,delta=4*60*60,reg=None,distro=None,avg_train_loss=-1,sc=None,kappa=5000,beta=0.5):
+def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,scaled_labeler,delta=4*60*60,reg=None,distro=None,avg_train_loss=-1,sc=None,kappa=5000,beta=0.5,reactive=False):
     
     transform_test = transforms.Compose([
         transforms.ToTensor(),
@@ -896,7 +899,7 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,scaled_lab
         #     model_uncer[0]=0.0
 
 
-        ent_mode="collision"
+
 
         if ent_mode=="shannon":
             mean_probs=torch.mean(probs,dim=1)#.detach().numpy()[0]
@@ -1112,33 +1115,7 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,scaled_lab
                     data_needed=data_needed[near_data:]
 
         print("Data Needed : {}  Data Available : {}".format(len(data_needed),len(data_avail)))
-            # storage_data.to_csv("./cifar10/data/storage_test.csv")
-            # storage_data = pd.concat([storage_data,pd.DataFrame(np_data[:near_ts], columns=store_columns)])
-            # np_data=np_data[near_ts:]
 
-
-        # if len(storage_data)>20000:
-        #     if len(storage_data[new_data_idx:])>5000:
-        #         new_data_idx=len(storage_data)-1
-        #         predictions=storage_data['sense_pred'].values
-        #         uncertainty=storage_data['uncer'].values
-
-        #         calib_y=storage_data['loss_label'].values
-
-
-        #         reg=dummy_baseline_retrain(predictions,uncertainty,calib_y)
-        #         print("Trained new quantile regressor")
-
-
-
-
-        # print("Retrain Counter :",retrain_counter)
-        # print("Retrain if only training:",retrain_loss)
-
-        # print("Epis dist :",js_dist_epis)
-        # print("Epis dist :",js_dist_uncer)
-
-        # or js_dist_epis>distro.epis.avg+3*distro.epis.std
         if (js_loss_dist>distro.label.avg+3*distro.label.std ) and index%100==0 and index>0:
             loss_switch=1
             # data_needed.extend([t for t in range(index-100,index)])
@@ -1153,32 +1130,19 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,scaled_lab
         data_df.loc[len(data_df)] = new_row
 
 
-        # if len(data_df) > window_size and index%100==0 and index>0:
-        #     future_df=generate_time_intervals(in_ts,60)
-        #     fcst = prophet_model.predict(future_df)
+        if len(data_df) > window_size and index%100==0 and index>0:
+            future_df=generate_time_intervals(in_ts,60)
+            fcst = prophet_model.predict(future_df)
             
-        #     total_arrivals = int(fcst['yhat_upper'].sum())
+            total_arrivals = int(fcst['yhat_upper'].sum())
             
-        #     X=np.arange(len(data_df)).reshape(-1, 1)
-        #     pred=rolling_window_logistic_regression(X[-window_size:],data_df['total'].to_numpy()[-window_size:],total_arrivals)
-        #     max_loss=max(pred)
-        #     future_train_loss=total_arrivals*avg_train_loss+train_loss_sum
-        #     print("Predicted future loss :",max_loss)
-        #     print("Predicted future baseline :",future_train_loss)
+            X=np.arange(len(data_df)).reshape(-1, 1)
+            pred=rolling_window_logistic_regression(X[-window_size:],data_df['total'].to_numpy()[-window_size:],total_arrivals)
+            max_loss=max(pred)
+            future_train_loss=total_arrivals*avg_train_loss+train_loss_sum
+            print("Predicted future loss :",max_loss)
+            print("Predicted future baseline :",future_train_loss)
 
-
-        # if index%100==0 and index>0 and js_loss_dist>0:
-        #     excess_dist=js_loss_dist-distro.label.avg
-        #     if excess_dist<0:
-        #         excess_dist=0
-        #     scaled_dist=scale_dist(excess_dist,0,0.13)
-        #     if excess_dist>0:
-        #         quant_wanted=0.5+2*excess_dist
-        #     else:
-        #         quant_wanted=0.5
-        
-        # print("Quant Wanted :",quant_wanted)
-        # print("Quant New :",quant_new)
 
         if len(retraining_timestamps)>0:
             if storage_data['timestamp'].iloc[-1]<retraining_timestamps[-1][0]:
@@ -1195,8 +1159,9 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,scaled_lab
         data_threshold=int(beta*kappa)
 
         #ONLY FOR REACTIVE SCOUT
-        max_loss=predicted_loss
-        future_train_loss=train_loss_sum
+        if reactive:
+            max_loss=predicted_loss
+            future_train_loss=train_loss_sum
         
         print("Quant Used :",quant_wanted)
         print("Pred Correction : ",pred_fix)
@@ -1273,7 +1238,7 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,scaled_lab
             evalset=image_dataset(train_x,train_y,transform=transform_test)
 
             if sc is not None:
-                retrain_path='./cifar10/checkpoint2/retrain_ckpt_long_v5_full_results_with_temp_with_fix_collision_reactive_'+str(kappa)+'_'+str(int(delta))+'_'+str(sc)+'_'+str(beta)+'.pth'
+                retrain_path='./cifar10/checkpoint2/retrain_ckpt_long_scout_v1_'+str(kappa)+'_'+str(int(delta))+'_'+str(sc)+'_'+str(beta)+'.pth'
             start=time.time()
             net=train_img_model(trainset,testset,epochs=100,retrain=True,retrain_path=retrain_path)
             time_spent_retraining=time.time()-start
@@ -1393,7 +1358,7 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,scaled_lab
                 temp_sucess=True
                 
             print("Trained scaler")
-            with open('./cifar10/saved_models/sense_model_retrained_long_v5_full_results_with_temp_with_fix_collision_reactive_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'_'+str(beta)+'.pkl','wb') as output:
+            with open('./cifar10/saved_models/sense_model_retrained_long_scout_v1_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'_'+str(beta)+'.pkl','wb') as output:
                 pickle.dump(sense_model_new,output)
 
             x_grid = np.linspace(0, 1, 10000)
@@ -1406,14 +1371,14 @@ def run_sim(imgs,data,alpha_model,alpha_model_inf,sense_model,labeler,scaled_lab
             data_needed=[]
             data_avail=[]
             retraining_timestamps.append([in_ts,storage_data[-1:]['timestamp'].values[0],avg_train_loss_new,time_spent_retraining])
-            np.save('./cifar10/data/retraining_ts_long_v5_full_results_with_temp_with_fix_collision_reactive_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'_'+str(beta)+'.npy',retraining_timestamps)
+            np.save('./cifar10/data/retraining_ts_long_scout_v1_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'_'+str(beta)+'.npy',retraining_timestamps)
         
 
         print("Index : {} Scaled True: {}  True : {}   Predicted : {}  Lower Bound : {}  Upper Bound : {}  Baseline :{}".format(index,scaled_true_loss,true_loss,predicted_loss,predicted_lower,predicted_upper,train_loss_sum))
         
     storage_data = pd.DataFrame(np_data, columns=store_columns)
     # np.save('./cifar10/data/resnet_simple_correction_ablation_v12_'+str(delta)+'_'+str(sc)+'.npy',np_features)
-    storage_data.to_csv('./cifar10/data/results_long_v5_full_results_with_temp_with_fix_collision_reactive_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'_'+str(beta)+'.csv')
+    storage_data.to_csv('./cifar10/data/results_long_scout_v1_'+str(kappa)+'_'+str(delta)+'_'+str(sc)+'_'+str(beta)+'.csv')
     dist_data=pd.DataFrame(dist_df_array, columns=dist_columns)
     # dist_data.to_csv('./cifar10/data/retraining_ts_long_v1_'+str(delta)+'_'+str(sc)+'.csv')
 
@@ -1429,12 +1394,13 @@ delta=float(sys.argv[1])
 sc=sys.argv[2]
 kappa=int(sys.argv[3])
 beta=float(sys.argv[4])
+reactive=bool(sys.argv[5])
 
 
 future_data=pd.read_csv("./cifar10/data/future_long_scenario_"+str(sc)+".csv",index_col=0)
 
 
-filename='results_long_v5_full_results_with_temp_with_fix_collision_reactive_'+str(kappa)+'_'+str(delta*60*60)+'_'+str(sc)+'_'+str(beta)+'.csv'
+filename='results_long_scout_v1_'+str(kappa)+'_'+str(delta*60*60)+'_'+str(sc)+'_'+str(beta)+'.csv'
 directory = "./cifar10/data/"
 
 
@@ -1494,5 +1460,5 @@ else:
 
     print(full_dist.label.avg)
 
-    run_sim(img_ds,future_data,net,model_inf,sense_model,labeler,scaled_labeler,delta=delta*60*60,reg=reg,distro=full_dist,avg_train_loss=train_y.mean(),sc=sc,kappa=kappa,beta=beta)
+    run_sim(img_ds,future_data,net,model_inf,sense_model,labeler,scaled_labeler,delta=delta*60*60,reg=reg,distro=full_dist,avg_train_loss=train_y.mean(),sc=sc,kappa=kappa,beta=beta,reactive=reactive)
 

@@ -129,44 +129,9 @@ class label_gen:
 
 
 
-def get_baseline(data_x,data_y,data_loss,sense_model):
-    pred_logits=sense_model.inf(data_x,apply_temp=True)
-    probs=F.softmax(pred_logits,dim=-1)
-    model_uncer=model_uncertainty(probs).detach().numpy()
-    mean_probs=torch.mean(probs,dim=1)
-    confidences, predictions = torch.max(mean_probs, 1)
-    confidences=confidences.detach().numpy()
-    predictions=predictions.detach().numpy()
-    mean_probs=mean_probs.detach().numpy()
-    uncer=np.apply_along_axis(renyi_entropy,axis=1,arr=mean_probs,alpha=2)
-
-    correct_uncer=model_uncer[predictions==data_y]
-    incorrect_uncer=model_uncer[predictions!=data_y]
-
-    correct_conf=confidences[predictions==data_y]
-    incorrect_conf=confidences[predictions!=data_y]
-
-    print("Avg correct confidence :",correct_conf.mean())
-    print("Avg incorrect confidence :",incorrect_conf.mean())
-
-    
-    return correct_uncer.mean(),incorrect_uncer.mean()
 
 
-    # pred_loss=np.argmax(mean_probs)    
 
-
-def dummy_baseline_retrain(predictions,model_uncer,calib_y):
-
-    train_x=np.hstack([np.expand_dims(predictions,1),np.expand_dims(model_uncer,1)])
-    # clf = LinearRegression()
-    # mapie_reg = MapieRegressor(estimator=clf,cv=3)
-    # mapie_reg = mapie_reg.fit(train_x, calib_y)
-
-    qrf = RandomForestQuantileRegressor(n_estimators=1000)
-    qrf.fit(train_x,calib_y)
-    print(qrf)
-    return qrf
 
 def dummy_baseline_new(sense_model,scaled_labeler,calib_x,calib_y,calib_loss):
 
@@ -207,73 +172,6 @@ def dummy_baseline_new(sense_model,scaled_labeler,calib_x,calib_y,calib_loss):
 
     return qrf
 
-def dummy_baseline(sense_model,calib_x,calib_y):
-
-    pred_logits=sense_model.inf(calib_x,apply_temp=True)
-    probs=F.softmax(pred_logits,dim=-1)
-    model_uncer=model_uncertainty(probs).detach().numpy()
-    model_uncer[model_uncer<0] = 0
-    mean_probs=torch.mean(probs,dim=1)
-    uncer=entropy(mean_probs).detach().numpy()
-    confidences, predictions = torch.max(mean_probs, 1)
-
-    confidences=confidences.detach().numpy()
-    predictions=predictions.detach().numpy()
-    # model_uncer[model_uncer<0]=0
-    # np.save('./cifar10/data/qrf_epis.npy',model_uncer)
-    # np.save('./cifar10/data/qrf_uncer.npy',uncer)
-    # np.save('./cifar10/data/qrf_predictions.npy',predictions)
-    # x=input()
-    
-    train_x=np.hstack([np.expand_dims(predictions,1),np.expand_dims(model_uncer,1),np.expand_dims(uncer,1)])
-    # print(train_x.shape)
-
-    # train_x_majority = train_x[calib_y == 0]
-    # train_x_minority = train_x[calib_y == 1]
-    # train_x_minority_oversampled, y_minority_oversampled = resample(
-    #     train_x_minority, calib_y[calib_y == 1], replace=True, n_samples=len(train_x_majority), random_state=42
-    # )
-    # X_balanced = np.concatenate([train_x_majority, train_x_minority_oversampled])
-    # y_balanced = np.hstack([calib_y[calib_y == 0], y_minority_oversampled])
-    # train_x=np.hstack([np.expand_dims(predictions,1),np.expand_dims(model_uncer,1),np.expand_dims(uncer,1)])
-    # clf = LinearRegression()
-    # mapie_reg = MapieRegressor(estimator=clf,cv=3)
-    # mapie_reg = mapie_reg.fit(train_x, calib_y)
-
-    qrf = RandomForestQuantileRegressor(n_estimators=500,random_state=434)
-    # qrf.fit(X_balanced,y_balanced)
-    qrf.fit(train_x,calib_y)
-    print(qrf)
-
-    return qrf
-
-
-def expected_loss(sense_model,train_x,train_y,qrf):
-    pred_logits=sense_model.inf(train_x,apply_temp=True)
-    probs=F.softmax(pred_logits,dim=-1)
-    model_uncer=model_uncertainty(probs).detach().numpy()
-
-    mean_probs=torch.mean(probs,dim=1)
-    uncer=entropy(mean_probs).detach().numpy()
-    confidences, predictions = torch.max(mean_probs, 1)
-
-    confidences=confidences.detach().numpy()
-    predictions=predictions.detach().numpy()
-
-    feat=np.hstack([np.expand_dims(predictions,1),np.expand_dims(model_uncer,1),np.expand_dims(uncer,1)])
-
-    y_pred = qrf.predict(feat, quantiles=[0.3, 0.5, 0.85])
-    
-    low_y=sum(y_pred[:,0])
-    high_y=sum(y_pred[:,2])
-
-    avg_loss=(high_y-low_y)/2
-    avg_loss+=low_y
-
-    print(avg_loss/len(train_x))
-
-    return low_y/len(train_x),avg_loss/len(train_x),high_y/len(train_x),sum(train_y)/len(train_x)
-
 
 def gen_dist_labels(labels):
     labels=np.round(labels)
@@ -304,34 +202,6 @@ def gen_dist_cont(X):
     kde = gaussian_kde(X)
     return kde
 
-
-
-# def jensen_shannon_divergence(array1, array2, bins=50):
-#     """
-#     Compute the Jensen-Shannon divergence between two distributions.
-    
-#     Parameters:
-#         array1 (np.ndarray): The first array of continuous values.
-#         array2 (np.ndarray): The second array of continuous values.
-#         bins (int): Number of bins to discretize the distributions.
-
-#     Returns:
-#         float: Jensen-Shannon divergence.
-#     """
-#     # Compute histograms for both arrays
-#     hist1, bin_edges = np.histogram(array1, bins=bins, density=False)
-#     hist2, _ = np.histogram(array2, bins=bin_edges, density=False)
-    
-#     # Add a small value to avoid log(0) issues
-#     hist1 += 1e-10
-#     hist2 += 1e-10
-
-#     # Compute the midpoint distribution
-#     midpoint = 0.5 * (hist1 + hist2)
-
-#     # Calculate Jensen-Shannon divergence
-#     js_divergence = 0.5 * (entropy2(hist1, midpoint) + entropy2(hist2, midpoint))
-#     return js_divergence
 
 def jensen_shannon_divergence(a_ref: np.ndarray,
                   a_win: np.ndarray,
@@ -574,65 +444,14 @@ def get_base_distribution(sense_model,train_x,train_y,reg_x,reg_y,reg,window_siz
     print("AVG EPIS DIST :",full_dist.test_dist_arr.mean())
     print("STD EPIS DIST :",full_dist.test_dist_arr.std())
 
-    np.save('./census/data/reg_epis.npy',reg_model_uncer)
-    np.save('./census/data/base_epis.npy',model_uncer)
-    np.save('./census/data/quantile_test.npy',y_pred_test)
-    np.save('./census/data/quantile_target.npy',train_y)
+    # np.save('./census/data/reg_epis.npy',reg_model_uncer)
+    # np.save('./census/data/base_epis.npy',model_uncer)
+    # np.save('./census/data/quantile_test.npy',y_pred_test)
+    # np.save('./census/data/quantile_target.npy',train_y)
     return full_dist
 
-    
-def get_training_dist(sense_model,train_x,train_y,qrf):
-
-    pred_logits=sense_model.inf(train_x,apply_temp=True)
-    probs=F.softmax(pred_logits,dim=-1)
-    
-    model_uncer=model_uncertainty(probs).detach().numpy()
 
 
-    mean_probs=torch.mean(probs,dim=1)
-
-    confidences, predictions = torch.max(mean_probs, 1)
-
-    confidences=confidences.detach().numpy()
-    predictions=predictions.detach().numpy()
-
-    feat=np.hstack([np.expand_dims(predictions,1),np.expand_dims(model_uncer,1)])
-
-
-def scale_dist(dist, u_min, u_max):
-    # Normalize the uncertainty to be in the same scale as prediction (0 to 3)
-    scaled_dist = (dist - u_min) / (u_max - u_min) * 0.35
-    return scaled_dist
-
-# def diff_dist(base_dist,dist1):
-#     diff=[]
-#     for i in range(len(base_dist)):
-#         diff.append()
-
-# def expected_js(sense_model,train_x,train_y,qrf):
-#     pred_logits=sense_model.inf(train_x,apply_temp=True,mode="ensemble")
-#     probs=F.softmax(pred_logits,dim=-1)
-#     model_uncer=model_uncertainty(probs).detach().numpy()
-
-#     mean_probs=torch.mean(probs,dim=1)
-
-#     confidences, predictions = torch.max(mean_probs, 1)
-
-#     confidences=confidences.detach().numpy()
-#     predictions=predictions.detach().numpy()
-
-#     feat=np.hstack([np.expand_dims(predictions,1),np.expand_dims(model_uncer,1)])
-
-#     y_pred = qrf.predict(feat, quantiles=[0.3, 0.5, 0.9])
-    
-#     low_y=y_pred[:,0]
-#     median_y=y_pred[:,1]
-#     high_y=y_pred[:,2]
-    
-#     _,low_counts=np.unique(low_y,)
-
-#     distance.jensenshannon([1.0, 0.0, 0.0], [0.0, 1.0, 0.0], 2.0)
-    
 def generate_time_intervals(start_time_seconds, num_intervals):
     # Convert start_time to datetime object
     start_datetime = datetime.utcfromtimestamp(start_time_seconds)
@@ -1119,7 +938,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
             full_train_data=torch_dataset(full_train_x,full_train_y)
             deployment_data=torch_dataset(new_train_x,new_train_y)
 
-            model_path="./census/saved_models/census_classifier_v5_paper_with_temp_with_fix_shannon_reactive_"+str(int(delta))+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".pt"
+            model_path="./census/saved_models/census_classifier_v1_paper_with_temp_with_fix_shannon_reactive_"+str(int(delta))+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".pt"
             start_time=time.time()
             train_model(new_train_data,new_test_data,model_path,epochs=100)
             time_taken=time.time()-start_time
@@ -1184,14 +1003,14 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
             
             quant_wanted=distro.best_quant
             print("Trained scaler")
-            with open("./census/saved_models/sense_model_retrain_v5_paper_with_temp_with_fix_shannon_reactive_"+str(delta)+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".pkl",'wb') as output:
+            with open("./census/saved_models/sense_model_retrain_v1_"+str(delta)+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".pkl",'wb') as output:
                 pickle.dump(sense_model,output)
 
             data_needed=[]
             data_avail=[]
             retraining_timestamps.append([in_ts,storage_data[-1:]['timestamp'].values[0],sense_train_y.mean(),time_spent_retraining])
             avg_train_loss=train_y.mean()
-            np.save('./census/data/retraining_ts_pred_v5_paper_with_temp_with_fix_shannon_reactive_'+str(delta)+'_'+str(sc)+'_'+str(kappa)+'_'+str(beta)+'.npy',retraining_timestamps)
+            np.save('./census/data/retraining_ts_scout_v1_'+str(delta)+'_'+str(sc)+'_'+str(kappa)+'_'+str(beta)+'.npy',retraining_timestamps)
             # x=input()
 
         
@@ -1231,7 +1050,7 @@ def run_sim(data,alpha_model,alpha_model_inf,sense_model,labeler,delta=1*60*60,r
         # print("True pred {} Predicted lower {} Predicted upper {}".format(true_loss, predicted_lower,predicted_upper))
     storage_data = pd.DataFrame(np_data, columns=store_columns)
 
-    storage_data.to_csv("./census/data/pred_results_v5_paper_with_temp_with_fix_shannon_reactive_"+str(delta)+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".csv")
+    storage_data.to_csv("./census/data/scout_results_v1_"+str(delta)+"_"+str(sc)+"_"+str(kappa)+"_"+str(beta)+".csv")
 
 
 
