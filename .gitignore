@@ -1,8 +1,15 @@
-# Ignore all NumPy, CSV, and PyTorch files
+# Ignore all NumPy, CSV, PyTorch, pickle, and archives
 *.npy
 *.csv
 *.pt
+*.pth
 *.pkl
+*.tar.gz
+*.pdf
+
+# Ignore dataset directories
+CIFAR-10-C/
+cifar-10-batches-py/
 
 # Keep these specific files
 !counts.npy
