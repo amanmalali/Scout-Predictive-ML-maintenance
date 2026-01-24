@@ -1,5 +1,5 @@
-```markdown
-# Census Metamodel & Uncertainty Quantification Framework
+
+# Metamodel & Uncertainty Quantification Framework
 
 This repository provides a framework for auditing machine learning models. It trains a **Metamodel** (an ensemble of XGBoost classifiers) to predict when a base model is likely to fail (high loss). It includes tools for **Temperature Scaling** (calibration) and **Uncertainty Decomposition** (separating Aleatoric vs. Epistemic uncertainty).
 
@@ -14,7 +14,6 @@ Before running the metamodel or the census binary classification model, the trai
 ```bash
 python ./census/gen_data.py
 
-```
 
 This will generate training and validation features with it's labels under ./census/data/
 
