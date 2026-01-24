@@ -4,7 +4,7 @@ import numpy as np, pandas as pd
 import torch, torch.nn.functional as F
 import matplotlib.pyplot as plt
 from torch.optim import LBFGS
-from sensitivity.new_temp_scaler import train_temp_scaler
+from metamodel.temp_scaler import train_temp_scaler
 from utils import custom_torch_dataset
 
 def to_tensor(x): return torch.as_tensor(x,dtype=torch.float32 )

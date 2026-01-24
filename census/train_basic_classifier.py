@@ -3,11 +3,6 @@ from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
 import copy
-# from inference import run_inference_dataset
-
-
-# df=pd.read_csv("/Users/aragh/project/testing/dataverse_files/mixed_0101_abrupto.csv")
-# df=df[:10000]
 
 
 

@@ -35,13 +35,13 @@ def generate_data_drift(df,mix_n=100):
     train_y=train_df['y'].values
     val_y=val_df['y'].values
 
-    train_df=train_df.drop(['y'],axis=1)
-    val_df=val_df.drop(['y'],axis=1)
+    train_x=train_df.drop(['y'],axis=1)
+    val_x=val_df.drop(['y'],axis=1)
 
-    scaler=MinMaxScaler()
+    # scaler=MinMaxScaler()
 
-    train_x=scaler.fit_transform(train_df)
-    val_x=scaler.transform(val_df)
+    # train_x=scaler.fit_transform(train_df)
+    # val_x=scaler.transform(val_df)
 
 
 
@@ -50,3 +50,7 @@ def generate_data_drift(df,mix_n=100):
 
     np.save("./census/data/census_train_y.npy",train_y)
     np.save("./census/data/census_val_y.npy",val_y)
+
+if __name__ == "__main__":
+    df=pd.read_csv("./census/data/adult.csv")
+    generate_data_drift(df,500)
