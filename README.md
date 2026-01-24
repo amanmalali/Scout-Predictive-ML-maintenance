@@ -13,7 +13,7 @@ Before running the metamodel or the census binary classification model, the trai
 
 ```bash
 python ./census/gen_data.py
-
+```
 
 This will generate training and validation features with it\'s labels under `./census/data/`.
 
