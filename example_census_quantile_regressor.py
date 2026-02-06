@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score
 
 # --- Imports ---
 from metamodel.train_metamodel import metamodel
-from quantile_reg.quantile_model import QuantileErrorEstimator
+from quantile_regressor.quantile_model import QuantileErrorEstimator
 
 # =========================================================
 # Original Scaled Label Generator (Mean + 2*Std)
