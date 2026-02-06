@@ -5,7 +5,7 @@ import torch
 from census.gen_data import generate_data_drift
 from census.train_basic_classifier import model_inf,calc_loss
 import pandas as pd
-from sensitivity.gen_train_data import build_sensitivity_training_set,build_sensitivity_training_ddla
+from metamodel.gen_train_data import build_sensitivity_training_set,build_sensitivity_training_ddla
 from gen_arrival_sim.generate_arrival_timestamps import add_timestamps_to_data
 import copy
 from sklearn.model_selection import train_test_split
@@ -216,8 +216,8 @@ if __name__=='__main__':
     train_len=len(sim_train_x)
     reps=(new_len//len(sim_train_x))
 
-    sim_x=np.load("./census/data/census_train_x.npy",allow_pickle=True)
-    sim_y=np.load("./census/data/census_train_y.npy",allow_pickle=True)
+    sim_x=train_x#np.load("./census/data/census_train_x.npy",allow_pickle=True)
+    sim_y=train_y#np.load("./census/data/census_train_y.npy",allow_pickle=True)
     for r in range(reps):
         shuffled_idx=np.random.choice(np.arange(train_len),train_len,replace=False)
         new_sim_x=sim_train_x[shuffled_idx]

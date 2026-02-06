@@ -3,22 +3,22 @@ import numpy as np
 import torch
 import pickle
 import torch.nn.functional as F
-from sensitivity.uncertainty import renyi_entropy,model_uncertainty,entropy
-from arrival.gen_time import find_nearest
+from metamodel.uncertainty import renyi_entropy,model_uncertainty,entropy
+from gen_arrival_sim.gen_time import find_nearest
 from sklearn.linear_model import LinearRegression
 from quantile_forest import RandomForestQuantileRegressor
 from sklearn.metrics import mean_pinball_loss
-from sensitivity.sense_model import sensitivity_model
+from metamodel.sense_model import sensitivity_model
 
-from sensitivity.temp_scaler import train_temp_scaler
+from metamodel.legacy_temp_scaler import train_temp_scaler
 from utils import custom_torch_dataset
 
 import numpy as np
 from utils import torch_dataset,run_inference_dataset
 import torch
 import pandas as pd
-from sensitivity.gen_train_data import build_sensitivity_training_set
-from arrival.gen_time import add_timestamps_simple
+from metamodel.gen_train_data import build_sensitivity_training_set
+from gen_arrival_sim.gen_time import add_timestamps_simple
 
 from scipy.stats import gaussian_kde
 from scipy.spatial.distance import jensenshannon

@@ -6,7 +6,7 @@ import pickle
 import torch
 # from sensitivity.sense_model import create_sense_model,train_sense_model
 
-from sensitivity.sense_model import sensitivity_model
+from metamodel.sense_model import sensitivity_model
 
 
 

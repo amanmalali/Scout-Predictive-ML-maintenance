@@ -15,7 +15,7 @@ import torchvision.transforms as transforms
 import torch
 import numpy as np
 from utils import run_inference_dataset,image_dataset
-from sensitivity.gen_train_data import generate_image_embeddings_v2,build_sensitivity_training_set_v2,build_sensitivity_training_ddla
+from metamodel.gen_train_data import generate_image_embeddings_v2,build_sensitivity_training_set_v2,build_sensitivity_training_ddla
 
 
 

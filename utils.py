@@ -19,7 +19,6 @@ def scale_data(features,scale_func=None):
     return scaled_df,scale_func
 
 
-
 class torch_dataset(Dataset):
     def __init__(self,X,y,scale=False):
         super().__init__()
@@ -41,8 +40,6 @@ class custom_torch_dataset(Dataset):
         self.X=X.astype(np.float32)
         self.logits=logits.astype(np.float32)
         self.y=y.astype(np.float32)
-        if scale:
-            self.X,self.scale_func=scale_data(self.X)
 
     def __len__(self):
         return len(self.X)
