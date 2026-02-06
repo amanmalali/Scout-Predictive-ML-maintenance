@@ -194,6 +194,9 @@ def train_scaler(data, epochs: int = 200, feat: bool = True, lr: float = 1e-3, h
     """
     Train feature-based temperature scaling (FBTS).
     """
+    # Detect Device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     # 80/20 Validation Split
     n_samples = len(data)
     n_val = int(0.2 * n_samples)
@@ -206,12 +209,12 @@ def train_scaler(data, epochs: int = 200, feat: bool = True, lr: float = 1e-3, h
     train_loader = DataLoader(train_subset, batch_size=len(train_subset), shuffle=True)
     val_loader = DataLoader(val_subset, batch_size=len(val_subset), shuffle=False)
     
-    scaler = scaler_model()
+    scaler = scaler_model().to(device)
     loss_f = UCECollisionEntropyLoss()
 
     if feat:
         # Pass hidden_dim to choose Linear (0) or MLP (>0)
-        lin_model = linear_model(data.X.shape[1], hidden_dim=hidden_dim) 
+        lin_model = linear_model(data.X.shape[1], hidden_dim=hidden_dim).to(device)
         optimizer = optim.Adam(lin_model.parameters(), lr=lr)
         best_state, best_val_loss = None, float("inf")
 
@@ -220,6 +223,7 @@ def train_scaler(data, epochs: int = 200, feat: bool = True, lr: float = 1e-3, h
             # --- Train ---
             lin_model.train()
             for x, logits, y in train_loader:
+                x, logits, y = x.to(device), logits.to(device), y.to(device)
                 optimizer.zero_grad()
                 temps = lin_model(x)
                 preds = scaler.forward_ext_temp(logits, temps)
@@ -233,6 +237,7 @@ def train_scaler(data, epochs: int = 200, feat: bool = True, lr: float = 1e-3, h
                 # Loop allows for larger val sets, though batch is usually full set here
                 val_losses = []
                 for x_val, logits_val, y_val in val_loader:
+                    x_val, logits_val, y_val = x_val.to(device), logits_val.to(device), y_val.to(device)
                     temps_val = lin_model(x_val)
                     preds_val = scaler.forward_ext_temp(logits_val, temps_val)
                     val_l, *_ = loss_f(preds_val, y_val)
@@ -261,6 +266,10 @@ def _train_static_scaler(data, scaler: nn.Module, epochs: int = 200, lr: float =
     """
     Train a bounded static scaler (global or per-member).
     """
+    # Detect Device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    scaler = scaler.to(device)
+
     # 80/20 Validation Split
     n_samples = len(data)
     n_val = int(0.2 * n_samples)
@@ -282,6 +291,7 @@ def _train_static_scaler(data, scaler: nn.Module, epochs: int = 200, lr: float =
         # --- Train ---
         scaler.train()
         for _, logits, labels in train_loader:
+            logits, labels = logits.to(device), labels.to(device)
             opt.zero_grad()
             loss, *_ = loss_f(scaler(logits), labels)
             loss.backward()
@@ -292,6 +302,7 @@ def _train_static_scaler(data, scaler: nn.Module, epochs: int = 200, lr: float =
         with torch.no_grad():
             val_losses = []
             for _, logits_val, labels_val in val_loader:
+                logits_val, labels_val = logits_val.to(device), labels_val.to(device)
                 val_l, *_ = loss_f(scaler(logits_val), labels_val)
                 val_losses.append(val_l.item())
             avg_val_loss = sum(val_losses) / len(val_losses)
@@ -307,6 +318,7 @@ def _train_static_scaler(data, scaler: nn.Module, epochs: int = 200, lr: float =
         scaler.load_state_dict(best_state)
 
     with torch.no_grad():
+        # Ensure we are on the same device for calculations
         T_eff = scaler.T_min + (scaler.T_max - scaler.T_min) * \
                 torch.sigmoid(scaler.raw_temp.data)
     print("Optimal effective temperature(s):", T_eff)

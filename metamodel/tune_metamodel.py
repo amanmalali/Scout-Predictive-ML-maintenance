@@ -14,6 +14,16 @@ except ImportError:
     from train_metamodel import metamodel
     from uncertainty import entropy
 
+
+search_space = {
+        "n_estimators": tune.choice([400, 600, 800, 1000]),
+        "lr": tune.loguniform(1e-3, 0.1),
+        "max_depth": tune.choice([3, 5, 8, 10, 12]),
+        "subsample": tune.uniform(0.5, 0.8),
+        "grow_policy": tune.choice(['depthwise', 'lossguide']),
+        "min_child_weight": tune.choice([0.2, 0.5, 1, 5]),
+    }
+
 def evaluate_uncertainty_score(model, val_x, val_y, uncertainty_weight=0.05):
     """
     Calculates score: Accuracy + weight * (Uncertainty_Wrong - Uncertainty_Correct)
@@ -87,17 +97,8 @@ def objective(config, data):
         "unc_gap": unc_wrong - unc_correct
     })
 
-def run_sensitivity_search(X, Y, num_trials=20, test_size=0.2):
+def run_sensitivity_search(X, Y, num_trials=20, test_size=0.2, search_space=search_space):
     train_x, val_x, train_y, val_y = train_test_split(X, Y, test_size=test_size, random_state=42)
-    
-    search_space = {
-        "n_estimators": tune.choice([400, 600, 800, 1000]),
-        "lr": tune.loguniform(1e-3, 0.1),
-        "max_depth": tune.choice([3, 5, 8, 10, 12]),
-        "subsample": tune.uniform(0.5, 0.8),
-        "grow_policy": tune.choice(['depthwise', 'lossguide']),
-        "min_child_weight": tune.choice([0.2, 0.5, 1, 5]),
-    }
 
     algo = OptunaSearch()
 
@@ -112,7 +113,7 @@ def run_sensitivity_search(X, Y, num_trials=20, test_size=0.2):
         metric="score",
         mode="max",
         num_samples=num_trials,
-        resources_per_trial={"cpu": 2, "gpu": 0.5 if torch.cuda.is_available() else 0},
+        resources_per_trial={"cpu": 4},
         search_alg=algo,
         verbose=1
     )
