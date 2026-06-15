@@ -7,6 +7,8 @@ import os
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
+from scipy.stats import entropy as entropy2
+
 
 
 def scale_data(features,scale_func=None):
@@ -212,3 +214,50 @@ def unison_shuffled_copies(a, b):
     assert len(a) == len(b)
     p = np.random.permutation(len(a))
     return a[p], b[p]
+
+
+def jensen_shannon_divergence(a_ref: np.ndarray,
+                  a_win: np.ndarray,
+                  *,
+                  bins = 50,
+                  w_ref = None,
+                  eps: float = 1e-9):
+
+    # reference histogram — weighted if w_ref given
+    h_ref, edges = np.histogram(a_ref, bins=bins,
+                                weights=w_ref, density=False)
+    h_win, _     = np.histogram(a_win, bins=edges, density=False)
+
+    h_ref = h_ref.astype(float) + eps
+    h_win = h_win.astype(float) + eps
+    h_ref /= h_ref.sum()
+    h_win /= h_win.sum()
+
+    m = 0.5 * (h_ref + h_win)
+    return 0.5 * (entropy2(h_ref, m) + entropy2(h_win, m))
+
+
+def move_metamodel_to_device(metamodel_obj, device='cpu'):
+    """
+    Standalone utility to migrate pickled metamodel components 
+    (lin_model and scaler) to a specific torch device.
+    """
+    print(f"Migrating metamodel components to {device}...")
+    
+    # 1. Update the internal device string attribute
+    if hasattr(metamodel_obj, 'device'):
+        metamodel_obj.device = device
+
+    # 2. Move the PyTorch Linear Model (Temperature network)
+    if hasattr(metamodel_obj, 'lin_model') and metamodel_obj.lin_model is not None:
+        if hasattr(metamodel_obj.lin_model, 'to'):
+            metamodel_obj.lin_model.to(device)
+            print(f"   -> lin_model moved to {device}")
+
+    # 3. Move the Temperature Scaler
+    if hasattr(metamodel_obj, 'scaler') and metamodel_obj.scaler is not None:
+        if hasattr(metamodel_obj.scaler, 'to'):
+            metamodel_obj.scaler.to(device)
+            print(f"   -> scaler moved to {device}")
+    
+    return metamodel_obj

@@ -21,8 +21,11 @@ def train_xg(model,train_x,train_y,classes_weights):
 
 
 class metamodel:
-    def __init__(self,objective=None) -> None:
-        self.device='cuda' if torch.cuda.is_available() else 'cpu'
+    def __init__(self,objective=None,device=None) -> None:
+        if device is None:
+            self.device='cuda' if torch.cuda.is_available() else 'cpu'
+        else:
+            self.device=device
         if objective is None:
             self.xgb_models=self.create_sense_model()
         else:

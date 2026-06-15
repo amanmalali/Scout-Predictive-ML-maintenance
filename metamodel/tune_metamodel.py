@@ -110,7 +110,7 @@ def run_sensitivity_search(X, Y, num_trials=20, test_size=0.2, search_space=sear
     analysis = tune.run(
         tune.with_parameters(objective, data=(train_x, val_x, train_y, val_y)),
         config=search_space,
-        metric="score",
+        metric="accuracy",
         mode="max",
         num_samples=num_trials,
         resources_per_trial={"cpu": 4},
@@ -118,7 +118,7 @@ def run_sensitivity_search(X, Y, num_trials=20, test_size=0.2, search_space=sear
         verbose=1
     )
 
-    top_results = analysis.dataframe().sort_values("score", ascending=False).head(5)
+    top_results = analysis.dataframe().sort_values("accuracy", ascending=False).head(5)
     
     final_params = {
         "n_estimators": [],
